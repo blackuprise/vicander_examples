@@ -1,0 +1,48 @@
+{
+  "columns": [
+    {
+      "name": "id",
+      "primary_key": true,
+      "type": ":binary_id"
+    },
+    {
+      "name": "name",
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "email",
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "completed_tasks",
+      "primary_key": false,
+      "type": ":integer"
+    },
+    {
+      "name": "achievements",
+      "primary_key": false,
+      "type": ":map"
+    },
+    {
+      "name": "created_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "updated_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "version",
+      "primary_key": false,
+      "type": ":integer"
+    }
+  ],
+  "identity": [
+    "id"
+  ],
+  "table": "users"
+}

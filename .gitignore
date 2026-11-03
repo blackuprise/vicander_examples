@@ -1,0 +1,6 @@
+# Editor and local agent tooling
+.idea/
+.ide/
+.claude/
+AGENTS.md
+LEAN-CTX.md

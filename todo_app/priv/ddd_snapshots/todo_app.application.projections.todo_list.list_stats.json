@@ -1,0 +1,28 @@
+{
+  "columns": [
+    {
+      "name": "list_id",
+      "primary_key": true,
+      "type": ":binary_id"
+    },
+    {
+      "name": "items_added",
+      "primary_key": false,
+      "type": ":integer"
+    },
+    {
+      "name": "items_completed",
+      "primary_key": false,
+      "type": ":integer"
+    },
+    {
+      "name": "last_activity_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    }
+  ],
+  "identity": [
+    "list_id"
+  ],
+  "table": "todo_list_stats"
+}

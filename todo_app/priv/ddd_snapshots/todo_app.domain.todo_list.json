@@ -1,0 +1,43 @@
+{
+  "columns": [
+    {
+      "name": "id",
+      "primary_key": true,
+      "type": ":binary_id"
+    },
+    {
+      "name": "owner_id",
+      "primary_key": false,
+      "type": ":binary_id"
+    },
+    {
+      "name": "name",
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "items",
+      "primary_key": false,
+      "type": ":map"
+    },
+    {
+      "name": "created_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "updated_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "version",
+      "primary_key": false,
+      "type": ":integer"
+    }
+  ],
+  "identity": [
+    "id"
+  ],
+  "table": "todo_lists"
+}
