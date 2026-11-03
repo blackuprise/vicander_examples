@@ -7,8 +7,8 @@ delivered through the outbox, commands, queries, a read model, and an MCP server
 
 ## Setup
 
-The framework is a git dependency pinned to the `v0.1.0` release
-(`{:vicander, github: "blackuprise/vicander", tag: "v0.1.0"}`).
+The framework is a [Hex package](https://hex.pm/packages/vicander)
+(`{:vicander, "~> 0.1"}`).
 
 Postgres is needed on `localhost:5432` (user and password `postgres`). If you have none, start
 one with Docker:

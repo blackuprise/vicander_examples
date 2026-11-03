@@ -30,7 +30,7 @@ defmodule TodoApp.MixProject do
   defp deps do
     [
       # The DDD framework (this application is its sample).
-      {:vicander, github: "blackuprise/vicander", tag: "v0.1.0"},
+      {:vicander, "~> 0.1"},
       {:ecto_sql, "~> 3.11"},
       {:postgrex, ">= 0.0.0"},
       {:plug, "~> 1.16"},
