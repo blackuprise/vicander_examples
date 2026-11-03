@@ -10,6 +10,13 @@ delivered through the outbox, commands, queries, a read model, and an MCP server
 The framework is a git dependency pinned to the `v0.1.0` release
 (`{:vicander, github: "blackuprise/vicander", tag: "v0.1.0"}`).
 
+Postgres is needed on `localhost:5432` (user and password `postgres`). If you have none, start
+one with Docker:
+
+```bash
+docker compose up -d --wait    # Postgres 17; `docker compose down -v` removes it and its data
+```
+
 ```bash
 mix deps.get
 mix test          # creates and migrates the test database; needs Postgres on localhost
@@ -131,25 +138,89 @@ framework itself has no layers to check.
 
 ### The HTTP API (demo)
 
-`mix run --no-halt` also starts a small HTTP server on port 4000 (`config :todo_app, http_port: ...`),
-built on `plug` and `bandit` only. `TodoApp.Interface.HTTP` has no logic of its own: it passes each
-request to the MCP server, so it offers the same commands, queries and resources. It has no
-authentication, so keep it on localhost.
+`TodoApp.Interface.HTTP` has no logic of its own: it passes each request to the MCP server, so it
+offers the same commands, queries and resources. It is built on `plug` and `bandit` only, has no
+authentication, and so should stay on localhost.
+
+Start it (it needs the dev database, see Setup):
 
 ```bash
-curl localhost:4000/tools                                  # what can be called
-curl -X POST localhost:4000/tools/register_user -H 'content-type: application/json' \
-  -d '{"name":"Ann","email":"ann@example.com"}'            # call a command or query
-curl localhost:4000/resources/todo_list/by/owner_id/<id>   # read lists
+mix run --no-halt        # listens on http://localhost:4000
 ```
 
-Success is `200`, a business error is `422`, an unknown tool or route is `404`.
+The port is `config :todo_app, http_port: 4000`; `config :todo_app, start_http: false` turns the
+server off (the tests do).
+
+| Route                              | What it does                                         |
+|------------------------------------|------------------------------------------------------|
+| `GET /tools`                       | lists every command and query with its input schema  |
+| `POST /tools/:name`                | calls a command or query, the JSON body is its input |
+| `GET /resources/:entity/*path`     | reads an aggregate, e.g. `/resources/todo_list/<id>` |
+
+A full session (copy the `id` from each response into the next call):
+
+```bash
+H='content-type: application/json'
+
+curl localhost:4000/tools                                        # what can be called
+
+curl -X POST localhost:4000/tools/register_user -H "$H" \
+  -d '{"name":"Ann","email":"ann@example.com"}'                  # -> the user, with its id
+curl -X POST localhost:4000/tools/create_list -H "$H" \
+  -d '{"owner_id":"<user id>","name":"Home"}'                    # -> the list, with its id
+curl -X POST localhost:4000/tools/add_item -H "$H" \
+  -d '{"list_id":"<list id>","title":"Call Bob","priority":"high","tags":["phone"]}'
+curl -X POST localhost:4000/tools/open_items -H "$H" \
+  -d '{"list_id":"<list id>","priority":"high"}'                 # a query
+
+curl localhost:4000/resources/todo_list/<list id>                # one list
+curl localhost:4000/resources/todo_list/by/owner_id/<user id>    # all lists of a user
+```
+
+Success is `200`, a business error (`{"error": {"code": ..., "message": ...}}`, such as a blank
+title) is `422`, an unknown tool, resource or route is `404`, and anything else is `500`. Run
+`curl localhost:4000/tools` for the exact tool names and fields.
 
 ### The MCP server
 
-`mix compile && mix vic.mcp TodoApp.Interface.MCP` serves the application to an AI client over
-stdio (`--read-only` offers only the queries and resources). See the framework's README for what
-a client sees.
+The same application can be served to an AI client (Claude Code, Claude Desktop, or any MCP client)
+over stdio. It offers the six commands and five queries as tools, and the lists and users as
+resources (`todo_list://<id>`, `todo_list://by/owner_id/<owner id>`). A resource shows every field,
+including a user's email.
+
+```bash
+mix compile && mix vic.mcp TodoApp.Interface.MCP               # serve on stdin/stdout
+mix vic.mcp TodoApp.Interface.MCP --read-only                  # queries and resources only
+```
+
+The server needs Postgres and the dev database (`mix ecto.setup`), and must run from this
+directory.
+
+**Claude Code**, from `todo_app/`:
+
+```bash
+claude mcp add todo -- mix vic.mcp TodoApp.Interface.MCP
+```
+
+**Any other client** takes a command, arguments and a working directory in its MCP settings, for
+example:
+
+```json
+{
+  "mcpServers": {
+    "todo": {
+      "command": "mix",
+      "args": ["vic.mcp", "TodoApp.Interface.MCP"],
+      "cwd": "/path/to/vicander_examples/todo_app"
+    }
+  }
+}
+```
+
+Then ask the client something like "Register Ann (ann@example.com), create a list called Home for
+her and add an item 'Buy milk'". To check the server without a client, use the MCP Inspector:
+`npx @modelcontextprotocol/inspector mix vic.mcp TodoApp.Interface.MCP`. See the framework's
+README for what a client sees.
 
 ### Achievements
 
