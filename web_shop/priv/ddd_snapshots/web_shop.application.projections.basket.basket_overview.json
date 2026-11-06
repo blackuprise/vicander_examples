@@ -1,0 +1,28 @@
+{
+  "columns": [
+    {
+      "name": "basket_id",
+      "primary_key": true,
+      "type": ":binary_id"
+    },
+    {
+      "name": "customer_id",
+      "primary_key": false,
+      "type": ":binary_id"
+    },
+    {
+      "name": "item_count",
+      "primary_key": false,
+      "type": ":integer"
+    },
+    {
+      "name": "total_cents",
+      "primary_key": false,
+      "type": ":integer"
+    }
+  ],
+  "identity": [
+    "basket_id"
+  ],
+  "table": "basket_overviews"
+}

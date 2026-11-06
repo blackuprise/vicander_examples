@@ -1,0 +1,28 @@
+{
+  "columns": [
+    {
+      "name": "day",
+      "primary_key": true,
+      "type": ":string"
+    },
+    {
+      "name": "orders",
+      "primary_key": false,
+      "type": ":integer"
+    },
+    {
+      "name": "items_sold",
+      "primary_key": false,
+      "type": ":integer"
+    },
+    {
+      "name": "revenue_cents",
+      "primary_key": false,
+      "type": ":integer"
+    }
+  ],
+  "identity": [
+    "day"
+  ],
+  "table": "daily_sales"
+}
