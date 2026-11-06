@@ -1,0 +1,48 @@
+{
+  "columns": [
+    {
+      "name": "id",
+      "primary_key": true,
+      "type": ":binary_id"
+    },
+    {
+      "name": "customer_id",
+      "primary_key": false,
+      "type": ":binary_id"
+    },
+    {
+      "name": "lines",
+      "primary_key": false,
+      "type": ":map"
+    },
+    {
+      "name": "total_cents",
+      "primary_key": false,
+      "type": ":integer"
+    },
+    {
+      "name": "placed_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "created_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "updated_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "version",
+      "primary_key": false,
+      "type": ":integer"
+    }
+  ],
+  "identity": [
+    "id"
+  ],
+  "table": "orders"
+}
