@@ -17,7 +17,12 @@ defmodule WebShop.Application.Commands.User.RegisterUser do
 
     field :name, :string, required: true, description: "The user's name"
     field :email, :string, required: true, description: "The login email"
-    field :password, :string, required: true, description: "The password, at least 8 characters"
+
+    field :password, :string,
+      required: true,
+      sensitive: true,
+      description: "The password, at least 8 characters"
+
     field :role, {:enum, [:customer, :admin]}, default: :customer, description: "The user's role"
   end
 

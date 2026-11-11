@@ -7,13 +7,11 @@ defmodule WebShop.Boot do
 
   alias WebShop.Application.Projections.Basket.BasketOverview
   alias WebShop.Application.Projections.Order.DailySales
-  alias WebShop.Infrastructure.{LogRedactor, Repo}
+  alias WebShop.Infrastructure.Repo
   alias WebShop.Interface.Web.Endpoint
 
   @impl Application
   def start(_type, _args) do
-    LogRedactor.install()
-
     children =
       [
         Repo,
@@ -41,5 +39,8 @@ defmodule WebShop.Boot do
     if Application.get_env(:web_shop, :start_outbox_poller, true), do: [], else: false
   end
 
-  defp web, do: [Endpoint]
+  # `mix shop.mcp` runs the application without the web server (and without the poller).
+  defp web do
+    if Application.get_env(:web_shop, :start_web, true), do: [Endpoint], else: []
+  end
 end

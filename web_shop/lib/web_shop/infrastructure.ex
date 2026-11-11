@@ -5,7 +5,6 @@ defmodule WebShop.Infrastructure do
     deps: [WebShop.Domain],
     exports: [
       Repo,
-      LogRedactor,
       User.Repository,
       Product.Repository,
       Basket.Repository,

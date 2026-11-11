@@ -31,6 +31,45 @@ Seeded logins (development only): `admin@shop.test` / `admin-password` and
 | `/admin/products` | admins | add products, restock |
 | `/admin/report` | admins | orders and revenue today and for 7 days, pending baskets, low stock (refreshes every 5s) |
 
+## MCP: the shop for an AI client
+
+The shop can be used by an AI client (Claude Code, Claude Desktop, any MCP client). It mostly
+reads; the one thing it changes is stock, and only for an admin. Nothing can be bought or
+registered through it. It **acts as one user, with the rules of the web interface**:
+
+| tool | who may call it |
+|---|---|
+| `me` | everyone signed in: your id, name, email, role (the other tools need your id) |
+| `list_products` | everyone signed in |
+| `view_basket`, `orders_of_customer` | a customer, for their own id; an admin, for anyone's |
+| `shop_report`, `pending_baskets` | admins only, with their own id as `admin_id` |
+| `restock_product` | admins only, with their own id as `admin_id`, a `product_id` and a `quantity` |
+
+```bash
+SHOP_MCP_PASSWORD=customer-password mix shop.mcp --email customer@shop.test   # stdin/stdout
+SHOP_MCP_PASSWORD=admin-password mix shop.mcp --email admin@shop.test --read-only   # no restocking
+
+claude mcp add shop --env SHOP_MCP_PASSWORD=customer-password -- \
+  mix shop.mcp --email customer@shop.test
+```
+
+`--read-only` refuses the command tool whoever the user is. A restock is the `RestockProduct`
+command: it checks the admin role again itself, so the policy only adds that `admin_id` must be
+the signed-in user.
+
+The server signs in with `--email` (or `SHOP_MCP_EMAIL`) and `SHOP_MCP_PASSWORD` on the first
+call, through the application's `Authenticate` query. The password is an environment variable,
+never an argument, so it is not in the process list. Only the user's id is kept: every call asks
+the application for the user again, so a changed role or a deleted account takes effect at once,
+as on the web. A refused call says why (`Admins only.`), and `tools/list` shows every tool to
+everyone. Passwords, registration and login are not offered at all.
+
+`mix shop.mcp` starts the application without the web server and the outbox poller, so it runs
+next to a shop that is already up on port 4000 (restocking emits no events, so nothing waits for
+the poller). The code is `interface/mcp.ex` (what is offered), `interface/mcp/policy.ex` (who may
+call what) and `interface/mcp/me.ex`; like the web interface it calls the application's commands
+and queries only.
+
 ## How it is built
 
 Four layers, enforced at compile time by `boundary` and one module per file:
@@ -40,6 +79,7 @@ domain/          User (+Password), Product, Basket (+BasketItem), Order (+OrderL
 application/     commands/ queries/ projections/ authorize.ex
 infrastructure/  Postgres adapters, one per port
 interface/web/   endpoint, router, auth, LiveViews: calls the application only
+interface/mcp*   the read-only MCP server and who may call what: calls the application only
 ```
 
 * **Checkout** (`CheckOut`) is one command and one unit of work: it reads the basket and products,
@@ -59,9 +99,10 @@ interface/web/   endpoint, router, auth, LiveViews: calls the application only
 
 ## Things to know
 
-* The framework logs command parameters at debug level, passwords included. Dev logs at `info`;
-  keep production at `info` or above.
+* The framework logs every command and query, with its parameters, at debug level. The password
+  fields are `sensitive: true`, so they are left out of those lines (nothing filters the text
+  afterwards); the other parameters, such as the email, are logged. Dev logs at `info`; keep
+  production at `info` or above. `SQL=1` logs SQL with its parameters, the password hash among
+  them: only for throwaway data.
 * The session cookie holds only the user id; every page load asks the application for the user.
-* `hex.audit` currently reports advisories on the transitive `ecto` and `decimal` packages with no
-  patched release available; update when one ships.
 * Money is whole cents. A basket line keeps the name and price from when it was added.

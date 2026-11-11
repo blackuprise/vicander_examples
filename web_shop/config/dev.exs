@@ -18,7 +18,8 @@ config :web_shop, WebShop.Interface.Web.Endpoint,
     "dev-only-secret-key-base-dev-only-secret-key-base-dev-only-secret-key-base-0123"
 
 # `LOG=1 mix run --no-halt` logs every command, query, operation and event at debug level.
-# Secrets are hidden by WebShop.Infrastructure.LogRedactor. `SQL=1` adds the SQL queries.
+# Passwords are `sensitive: true` fields, so they are not in these lines. `SQL=1` adds the SQL
+# queries, with their parameters: do not use it with real data.
 config :logger, :default_handler, level: if(System.get_env("LOG"), do: :debug, else: :info)
 
 config :web_shop, WebShop.Infrastructure.Repo,
