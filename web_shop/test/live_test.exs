@@ -33,6 +33,47 @@ defmodule WebShop.LiveTest do
     assert conn |> recycle() |> get("/") |> redirected_to() == "/login"
   end
 
+  describe "header links" do
+    # A live link (`navigate`) is rendered with `data-phx-link`; a plain one (`href`) without.
+    # A live navigate across live sessions would be refused with a warning and a reload, so the
+    # header links across sessions on purpose.
+    defp live_link?(view, path), do: has_element?(view, ~s(a[href="#{path}"][data-phx-link]))
+
+    defp plain_link?(view, path),
+      do: has_element?(view, ~s(a[href="#{path}"])) and not live_link?(view, path)
+
+    test "an admin on a shop page: shop links are live, admin links load the page afresh",
+         %{conn: conn} do
+      {:ok, view, _html} = conn |> log_in(admin!()) |> live("/")
+
+      for path <- ~w(/ /basket /orders), do: assert(live_link?(view, path), path)
+      for path <- ~w(/admin/products /admin/report), do: assert(plain_link?(view, path), path)
+    end
+
+    test "an admin on an admin page: admin links are live, shop links load the page afresh",
+         %{conn: conn} do
+      {:ok, view, _html} = conn |> log_in(admin!()) |> live("/admin/report")
+
+      for path <- ~w(/admin/products /admin/report), do: assert(live_link?(view, path), path)
+      for path <- ~w(/ /basket /orders), do: assert(plain_link?(view, path), path)
+    end
+
+    test "a customer sees only the shop links, all live", %{conn: conn} do
+      {:ok, view, _html} = conn |> log_in(register!()) |> live("/basket")
+
+      for path <- ~w(/ /basket /orders), do: assert(live_link?(view, path), path)
+      refute has_element?(view, ~s(a[href^="/admin"]))
+    end
+
+    test "a guest's links between login and register are live", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/login")
+      assert live_link?(view, "/register")
+
+      {:ok, view, _html} = live(conn, "/register")
+      assert live_link?(view, "/login")
+    end
+  end
+
   describe "login" do
     test "a right password posts to the session, which logs in", %{conn: conn} do
       register!()

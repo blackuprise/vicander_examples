@@ -19,24 +19,30 @@ defmodule WebShop.Interface.Web.Auth do
 
   def current_user(_session), do: nil
 
+  # Each hook also records the live session its pages belong to (`:live_session`, see the
+  # router), because the header must know it: a live `navigate` works inside one session only,
+  # and a link to a page of another one has to be a plain `href` (a fresh page load).
   def on_mount(:redirect_if_logged_in, _params, session, socket) do
     case current_user(session) do
-      nil -> {:cont, mount_user(socket, nil)}
+      nil -> {:cont, socket |> mount_user(nil) |> assign(:live_session, :guest)}
       _user -> {:halt, redirect(socket, to: "/")}
     end
   end
 
   def on_mount(:require_user, _params, session, socket) do
     case current_user(session) do
-      nil -> {:halt, socket |> put_flash(:error, "Please log in.") |> redirect(to: "/login")}
-      user -> {:cont, mount_user(socket, user)}
+      nil ->
+        {:halt, socket |> put_flash(:error, "Please log in.") |> redirect(to: "/login")}
+
+      user ->
+        {:cont, socket |> mount_user(user) |> assign(:live_session, :customer)}
     end
   end
 
   def on_mount(:require_admin, params, session, socket) do
     case on_mount(:require_user, params, session, socket) do
       {:cont, %{assigns: %{current_user: %{role: :admin}}} = socket} ->
-        {:cont, socket}
+        {:cont, assign(socket, :live_session, :admin)}
 
       {:cont, socket} ->
         {:halt, socket |> put_flash(:error, "Admins only.") |> redirect(to: "/")}
