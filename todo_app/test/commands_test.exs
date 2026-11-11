@@ -62,13 +62,16 @@ defmodule TodoApp.CommandsTest do
     end
 
     test "fails when the owner does not exist" do
-      assert {:error, %Error{code: :owner_not_found, context: context}} =
-               Commands.TodoList.CreateList.call(%{
-                 owner_id: UUID.uuid4(),
-                 name: "Home"
-               })
+      missing = DDD.Identity.generate()
 
-      assert context.command == Commands.TodoList.CreateList
+      # `loads:` on the owner reads it before the command runs, and names what is missing.
+      assert {:error, %Error{code: :not_found, kind: :business} = error} =
+               Commands.TodoList.CreateList.call(%{owner_id: missing, name: "Home"})
+
+      assert error.entity == TodoApp.Domain.User
+      assert error.entity_id == missing
+      assert error.details == %{field: :owner_id, missing_ids: [missing]}
+      assert error.context.command == Commands.TodoList.CreateList
     end
   end
 
@@ -176,13 +179,13 @@ defmodule TodoApp.CommandsTest do
     end
 
     test "unknown list and unknown item", %{list: list} do
-      assert {:error, %Error{code: :list_not_found}} =
-               Commands.TodoList.AddItem.call(%{list_id: UUID.uuid4(), title: "x"})
+      assert {:error, %Error{code: :not_found, entity: TodoApp.Domain.TodoList}} =
+               Commands.TodoList.AddItem.call(%{list_id: DDD.Identity.generate(), title: "x"})
 
       assert {:error, %Error{} = error} =
                Commands.TodoList.CompleteItem.call(%{
                  list_id: list.id,
-                 item_id: UUID.uuid4()
+                 item_id: DDD.Identity.generate()
                })
 
       assert error.code == :precondition_failed
@@ -192,7 +195,7 @@ defmodule TodoApp.CommandsTest do
 
     test "a missing command field is a validation error from the command" do
       assert {:error, %Error{} = error} =
-               Commands.TodoList.AddItem.new(%{list_id: UUID.uuid4()})
+               Commands.TodoList.AddItem.new(%{list_id: DDD.Identity.generate()})
 
       assert Error.to_map(error) == %{title: ["is required"]}
     end
@@ -229,10 +232,14 @@ defmodule TodoApp.CommandsTest do
 
     test "rows written before an item gained fields still load, with defaults" do
       user = register!()
-      list_id = UUID.uuid4()
+      list_id = DDD.Identity.generate()
       now = DateTime.utc_now()
 
-      old_item = %{"id" => UUID.uuid4(), "title" => %{"value" => "Old"}, "status" => "open"}
+      old_item = %{
+        "id" => DDD.Identity.generate(),
+        "title" => %{"value" => "Old"},
+        "status" => "open"
+      }
 
       Repo.insert_all("todo_lists", [
         %{
@@ -351,7 +358,7 @@ defmodule TodoApp.CommandsTest do
 
       Repo.insert_all("domain_events", [
         %{
-          id: Ecto.UUID.dump!(UUID.uuid4()),
+          id: Ecto.UUID.dump!(DDD.Identity.generate()),
           event_type: "No.Such.Event",
           aggregate_id: "1",
           aggregate_type: "X",

@@ -30,13 +30,12 @@ defmodule TodoApp.MixProject do
   defp deps do
     [
       # The DDD framework (this application is its sample).
-      {:vicander, "~> 0.1"},
-      {:ecto_sql, "~> 3.11"},
+      {:vicander, "~> 0.3"},
+      {:ecto_sql, "~> 3.14"},
       {:postgrex, ">= 0.0.0"},
       {:plug, "~> 1.16"},
       {:bandit, "~> 1.5"},
       {:jason, "~> 1.4"},
-      {:elixir_uuid, "~> 1.2"},
       {:boundary, "~> 0.10", runtime: false}
     ]
   end

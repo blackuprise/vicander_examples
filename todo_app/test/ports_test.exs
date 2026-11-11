@@ -74,11 +74,14 @@ defmodule TodoApp.PortsTest do
     {:ok, list} = Commands.TodoList.CreateList.call(%{owner_id: user.id, name: "Home"})
 
     assert {:error, error} =
-             Commands.TodoList.CompleteItem.call(%{list_id: list.id, item_id: UUID.uuid4()})
+             Commands.TodoList.CompleteItem.call(%{
+               list_id: list.id,
+               item_id: DDD.Identity.generate()
+             })
 
     assert DDD.Error.has_code?(error, :item_not_found)
 
-    assert {:error, %{code: :owner_not_found}} =
-             Commands.TodoList.CreateList.call(%{owner_id: UUID.uuid4(), name: "x"})
+    assert {:error, %{code: :not_found}} =
+             Commands.TodoList.CreateList.call(%{owner_id: DDD.Identity.generate(), name: "x"})
   end
 end

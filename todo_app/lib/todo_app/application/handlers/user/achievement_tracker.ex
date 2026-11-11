@@ -10,8 +10,11 @@ defmodule TodoApp.Application.Handlers.User.AchievementTracker do
   work behind, and a retry never repeats work that was already committed. `RecordProgress` is
   also idempotent on its own.
 
+  A delivery runs in a unit of work, like a command: what `RecordProgress` saves is written,
+  in one statement with its events, just before the delivery commits.
+
   Two events for the same user handled at the same moment cannot overwrite each other: the
-  repository saves with optimistic locking, so the second save fails with `:stale_aggregate`
+  repository saves with optimistic locking, so the second write fails with `:stale_aggregate`
   (an infrastructure error, so the outbox retries the delivery). The retry recomputes from the
   lists and sees both.
   """

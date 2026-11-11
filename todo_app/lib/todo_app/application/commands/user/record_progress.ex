@@ -18,12 +18,15 @@ defmodule TodoApp.Application.Commands.User.RecordProgress do
     description "Recount a user's completed tasks from their lists and award the achievements it earns. " <>
                   "Safe to repeat: running it again changes nothing."
 
-    field :owner_id, :uuid, required: true, description: "The id of the user to recount"
+    field :owner_id, :uuid,
+      required: true,
+      loads: User,
+      description: "The id of the user to recount"
   end
 
   @impl DDD.Command
   def execute(%__MODULE__{owner_id: owner_id}) do
-    with {:ok, user} <- find_user(owner_id),
+    with {:ok, user} <- UserRepository.impl().find_by_id(owner_id),
          {:ok, updated} <- User.record_progress(user, completed_tasks(owner_id)),
          {:ok, saved} <- UserRepository.impl().save(updated) do
       log_progress(user, saved)
@@ -38,13 +41,6 @@ defmodule TodoApp.Application.Commands.User.RecordProgress do
         achievement.code not in Enum.map(before.achievements, & &1.code) do
       %{title: title, description: description} = Achievements.get(achievement.code)
       Logger.info("[achievements] #{saved.email} earned #{title}: #{description}")
-    end
-  end
-
-  defp find_user(owner_id) do
-    case UserRepository.impl().find_by_id(owner_id) do
-      {:ok, user} -> {:ok, user}
-      {:error, :not_found} -> {:error, {:user_not_found, "user #{owner_id} does not exist"}}
     end
   end
 

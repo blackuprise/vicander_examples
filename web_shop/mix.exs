@@ -25,9 +25,8 @@ defmodule WebShop.MixProject do
 
   defp deps do
     [
-      # Path while the unit of work and `loads:` are unreleased (same as todo_app).
-      {:vicander, path: "../../vicander"},
-      {:ecto_sql, "~> 3.11"},
+      {:vicander, "~> 0.3"},
+      {:ecto_sql, "~> 3.14"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix, "~> 1.8"},
       {:phoenix_html, "~> 4.1"},

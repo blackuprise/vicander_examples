@@ -127,7 +127,7 @@ defmodule TodoApp.FieldSpecsTest do
     end
 
     test "TodoList" do
-      assert {:error, error} = TodoList.new(owner_id: UUID.uuid4(), name: "   ")
+      assert {:error, error} = TodoList.new(owner_id: DDD.Identity.generate(), name: "   ")
       assert [%{field: :name, code: :name_blank}] = error.violations
     end
   end

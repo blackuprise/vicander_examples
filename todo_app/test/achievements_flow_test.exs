@@ -166,8 +166,12 @@ defmodule TodoApp.AchievementsFlowTest do
 
     test "an unknown user is an error that names the command" do
       assert {:error,
-              %Error{code: :user_not_found, context: %{command: Commands.User.RecordProgress}}} =
-               Commands.User.RecordProgress.call(%{owner_id: UUID.uuid4()})
+              %Error{
+                code: :not_found,
+                entity: TodoApp.Domain.User,
+                context: %{command: Commands.User.RecordProgress}
+              }} =
+               Commands.User.RecordProgress.call(%{owner_id: DDD.Identity.generate()})
     end
 
     test "existing users saved before the columns existed load with defaults", %{user: user} do
@@ -231,15 +235,15 @@ defmodule TodoApp.AchievementsFlowTest do
 
     test "an ItemCompleted for a list that does not exist is rejected: not retried, not a dead letter" do
       now = DateTime.utc_now()
-      event_id = UUID.uuid4()
+      event_id = DDD.Identity.generate()
 
       Repo.insert_all("domain_events", [
         %{
           id: Ecto.UUID.dump!(event_id),
           event_type: "TodoApp.Domain.TodoList.Events.ItemCompleted",
-          aggregate_id: UUID.uuid4(),
+          aggregate_id: DDD.Identity.generate(),
           aggregate_type: "TodoApp.Domain.TodoList",
-          payload: %{"item_id" => UUID.uuid4()},
+          payload: %{"item_id" => DDD.Identity.generate()},
           occurred_at: now,
           inserted_at: now
         }
@@ -273,7 +277,7 @@ defmodule TodoApp.AchievementsFlowTest do
     test "an event for an unknown list is logged, not fatal" do
       log =
         capture_log(fn ->
-          AchievementTracker.handle(%ItemCompleted{aggregate_id: UUID.uuid4()})
+          AchievementTracker.handle(%ItemCompleted{aggregate_id: DDD.Identity.generate()})
         end)
 
       assert log =~ "could not record progress"

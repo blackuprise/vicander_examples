@@ -14,6 +14,7 @@ defmodule TodoApp.Application do
       Commands.TodoList.RenameItem,
       Commands.User.RegisterUser,
       Commands.User.RecordProgress,
+      Commands.User.OnboardUser,
       Queries.TodoList.OpenItems,
       Queries.TodoList.ListsOfOwner,
       Queries.TodoList.SearchLists,
