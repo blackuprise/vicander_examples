@@ -7,8 +7,8 @@ delivered through the outbox, commands, queries, a read model, and an MCP server
 
 ## Setup
 
-The framework is a [Hex package](https://hex.pm/packages/vicander)
-(`{:vicander, "~> 0.1"}`).
+The framework is a [Hex package](https://hex.pm/packages/vicander); this example uses version
+0.3.0 (`{:vicander, "~> 0.3"}` in `mix.exs`).
 
 Postgres is needed on `localhost:5432` (user and password `postgres`). If you have none, start
 one with Docker:
@@ -79,7 +79,7 @@ lib/todo_app/
                                   events/ (achievement_earned), specs/ (6 rules)
   application/                    TodoApp.Application.*      depends on domain
     commands/todo_list/           create_list, add_item, complete_item, rename_item
-    commands/user/                register_user, record_progress
+    commands/user/                register_user, record_progress, onboard_user
     queries/todo_list/            open_items, lists_of_owner, search_lists, list_activity
     queries/user/                 achievements_of
     projections/todo_list/        list_stats (a read model fed by events, read by list_activity)
@@ -222,6 +222,73 @@ her and add an item 'Buy milk'". To check the server without a client, use the M
 `npx @modelcontextprotocol/inspector mix vic.mcp TodoApp.Interface.MCP`. See the framework's
 README for what a client sees.
 
+### The unit of work
+
+Every command runs in a unit of work (`DDD.UnitOfWork`), and so does every handler delivery. It
+changes nothing in how the commands are written, and a good deal in what they cost and how they
+behave:
+
+* **A list is read once and written once.** `AddItem` declares `field :list_id, :uuid, loads:
+  TodoListRepository`; the framework reads the list before `execute/1` runs, and the
+  `find_by_id` in `execute/1` is answered from memory. `save` only records the list. When the
+  command ends it is written: one `UPDATE`, and one `INSERT` of the `ItemAdded` event, inside the
+  command's transaction (`test/unit_of_work_test.exs` counts the statements).
+* **`loads:` names the aggregate.** `field :list_id, :uuid, loads: TodoList`, or `loads: true` on
+  a `{:ref, User}` field, which already says what it is. Where each aggregate is stored is
+  configured once (`config :vicander, :repositories` in `config/config.exs`, naming the domain's
+  port, whose adapter is chosen by `config :todo_app, :repositories`), so the application layer
+  never names infrastructure. A list that does not exist stops the command before it does
+  anything, with a business `:not_found` error that names the entity (`TodoList`), the id and the
+  field (`list_id`). That replaced a hand-written `Support.load_list` and three different error
+  codes (`list_not_found`, `owner_not_found`, `user_not_found`).
+* **Editing the same list at once works.** `AddItem`, `CompleteItem` and `RenameItem` say
+  `retry_on_conflict: 3`. When two edits overlap, the loser's write is refused (`:stale_aggregate`),
+  and the command runs again on the list as the winner left it, after a short random wait. The
+  rules are checked again on the fresh list: of two people completing the same item, one wins
+  and the other is told it is already done. The same retry covers a deadlock
+  (`:deadlock_detected`). `test/concurrent_edits_test.exs` does it on real connections.
+* **`updated_at` says when a list was stored.** Operations (`add_item`, `complete_item`) no
+  longer touch it; the write does, and only when something stored changed. What a command
+  returns is what was stored.
+
+One rule to know about: once a command has saved something, it cannot ask the repository for
+anything but an aggregate by its id (`find_by_owner_id`, `list`, `count` raise
+`DDD.UnitOfWork.PendingChangesError`), because those read the database, which does not have the
+unwritten change yet. `RecordProgress` counts the user's completed items *before* it saves the
+user, for that reason.
+
+#### Chaining commands
+
+A command can call other commands. They join its transaction and unit of work, so the chain is
+written once, at the end, and either all of it happens or none of it.
+`Commands.User.OnboardUser` registers a user, creates their first list and adds a welcome item:
+
+```elixir
+with {:ok, user} <- Commands.User.RegisterUser.call(%{name: name, email: email}),
+     {:ok, list} <- Commands.TodoList.CreateList.call(%{owner_id: user.id, name: "Getting started"}),
+     {:ok, list} <- Commands.TodoList.AddItem.call(%{list_id: list.id, title: "Welcome to your list"}) do
+  {:ok, %{user: user, list: list}}
+end
+```
+
+None of it is in the database while the chain runs, yet `CreateList` finds the user it was given
+and `AddItem` the list: both read by id, and the unit of work holds what was saved. At the end
+there is one `INSERT` per table.
+
+A chain stops working when a step *queries* after an earlier one saved something. `RecordProgress`
+looks a user's lists up with `find_by_owner_id`, so `CompleteItem` followed by `RecordProgress` in
+one command raises `PendingChangesError`, and the completion is rolled back with it
+(`test/chaining_test.exs` does exactly that). There are two ways to connect such steps:
+
+* **An event**, as the application does: `CompleteItem` emits `ItemCompleted`, and once it is
+  committed the outbox runs `AchievementTracker`, which calls `RecordProgress` (see
+  "Achievements"). The second step is its own transaction, and may be retried on its own.
+* **Two commands one after the other**, from whoever drives them (the HTTP handler, a script): the
+  first commits, so the second's queries see its work. You give up all-or-nothing across the two.
+
+The rule of thumb: chain commands that need each other's *ids*; connect commands that need each
+other's *queries* with an event, or run them in sequence.
+
 ### Achievements
 
 Users earn achievements for completed tasks (`lib/todo_app/domain/user/achievements.ex`):
@@ -244,5 +311,8 @@ Users earn achievements for completed tasks (`lib/todo_app/domain/user/achieveme
   so the saved user and the `AchievementEarned` events commit together; and because it
   recounts, running it twice would be a no-op anyway.
 * **Concurrent events.** Two events for one user handled at the same instant no longer overwrite
-  each other: the second save fails with `:stale_aggregate` (optimistic locking), the outbox
-  retries that delivery, and the recount then sees both.
+  each other: the second write fails with `:stale_aggregate` (optimistic locking) when the
+  handler's unit of work is written, the outbox retries that delivery, and the recount then sees
+  both. (`RecordProgress` does not use `retry_on_conflict` here: inside a delivery it joins the
+  delivery's transaction, and a command in an open transaction is never retried; the outbox is
+  the retry.)

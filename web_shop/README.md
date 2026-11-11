@@ -7,8 +7,8 @@ Admins add products, restock them and read a report (orders today, pending baske
 ## Run it
 
 Postgres is needed on `localhost:5432` (user and password `postgres`; `docker compose up -d --wait`
-starts one). Like `todo_app`, this example uses the unreleased unit of work and `loads:`, so
-`mix.exs` points at a checkout of the framework (`{:vicander, path: "../../vicander"}`).
+starts one). Like `todo_app`, it uses the [vicander](https://hex.pm/packages/vicander) Hex package,
+version 0.3.0 (`{:vicander, "~> 0.3"}` in `mix.exs`).
 
 ```bash
 mix deps.get

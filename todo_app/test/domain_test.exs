@@ -16,7 +16,7 @@ defmodule TodoApp.DomainTest do
   end
 
   defp list! do
-    {:ok, list} = TodoList.new(owner_id: UUID.uuid4(), name: "Home")
+    {:ok, list} = TodoList.new(owner_id: DDD.Identity.generate(), name: "Home")
     list
   end
 
@@ -126,7 +126,12 @@ defmodule TodoApp.DomainTest do
     end
 
     test "items saved before these fields existed load with the defaults" do
-      stored = %{"id" => UUID.uuid4(), "title" => %{"value" => "old"}, "status" => "open"}
+      stored = %{
+        "id" => DDD.Identity.generate(),
+        "title" => %{"value" => "old"},
+        "status" => "open"
+      }
+
       item = DDD.Serializer.load(TodoItem, stored)
       assert item.priority == :normal
       assert item.tags == []
@@ -189,7 +194,7 @@ defmodule TodoApp.DomainTest do
     test "needs an owner and a non-blank name" do
       assert {:error, error} = TodoList.new(%{})
       assert Error.codes(error) == [:required, :required]
-      assert {:error, error} = TodoList.new(owner_id: UUID.uuid4(), name: "  ")
+      assert {:error, error} = TodoList.new(owner_id: DDD.Identity.generate(), name: "  ")
       assert Error.to_map(error) == %{name: ["must not be blank"]}
     end
 
@@ -229,7 +234,7 @@ defmodule TodoApp.DomainTest do
     end
 
     test "an item that is not in the list is a precondition of the list's operation" do
-      missing = UUID.uuid4()
+      missing = DDD.Identity.generate()
 
       for {operation, result} <- [
             {:complete_item, TodoList.complete_item(list!(), missing)},
@@ -272,7 +277,7 @@ defmodule TodoApp.DomainTest do
     end
 
     test "a missing item is reported once, not once per rule" do
-      assert {:error, error} = TodoList.complete_item(list!(), UUID.uuid4())
+      assert {:error, error} = TodoList.complete_item(list!(), DDD.Identity.generate())
       assert length(error.violations) == 1
     end
 

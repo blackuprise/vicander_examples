@@ -107,7 +107,7 @@ defmodule TodoApp.MCPTest do
     assert error["error"]["entity_id"] == list["id"]
     assert [%{"code" => "already_completed"}] = error["error"]["violations"]
 
-    missing = call("open_items", %{"list_id" => UUID.uuid4()})
+    missing = call("open_items", %{"list_id" => DDD.Identity.generate()})
     assert missing["isError"] == true
     assert get_in(missing, ["content", Access.at(0), "text"]) =~ "list_not_found"
 
@@ -280,7 +280,7 @@ defmodule TodoApp.MCPTest do
     assert get_in(result, ["content", Access.at(0), "text"]) =~ "must be a uuid"
 
     assert %{"error" => %{"code" => -32_002}} =
-             rpc("resources/read", %{"uri" => "todo_list://#{UUID.uuid4()}"})
+             rpc("resources/read", %{"uri" => "todo_list://#{DDD.Identity.generate()}"})
   end
 
   test "resources are described and the lookups are the declared ones" do

@@ -1,8 +1,7 @@
 defmodule TodoApp.Application.Commands.TodoList.AddItem do
   @moduledoc "Add an item to a list."
-  use DDD.Command
+  use DDD.Command, retry_on_conflict: 3
 
-  alias TodoApp.Application.Commands.TodoList.Support
   alias TodoApp.Domain.TodoList
   alias TodoApp.Domain.TodoList.Repository, as: TodoListRepository
   alias TodoApp.Domain.TodoList.{Title, TodoItem}
@@ -10,8 +9,11 @@ defmodule TodoApp.Application.Commands.TodoList.AddItem do
   command do
     description "Add an item to a todo list. A list holds at most 10 open items."
 
+    # `loads:` reads the list before `execute/1` runs, and fails the command with a `:not_found`
+    # error if there is none.
     field :list_id, :uuid,
       required: true,
+      loads: TodoList,
       description: "The list to add the item to"
 
     field :title, :string,
@@ -33,7 +35,7 @@ defmodule TodoApp.Application.Commands.TodoList.AddItem do
 
   @impl DDD.Command
   def execute(%__MODULE__{} = command) do
-    with {:ok, list} <- Support.load_list(command.list_id),
+    with {:ok, list} <- TodoListRepository.impl().find_by_id(command.list_id),
          {:ok, title} <- Title.new(value: command.title),
          {:ok, item} <-
            TodoItem.new(
