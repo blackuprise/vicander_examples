@@ -7,6 +7,9 @@
           --accent: #5b8def; --accent-text: #0b1020; --danger: #f97066; --ok: #47cd89; }
 }
 * { box-sizing: border-box; }
+/* Keep the room of the vertical scrollbar even when the page is short enough not to need one,
+   so a search that shrinks the results does not make the page jump sideways. */
+html { scrollbar-gutter: stable; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
 a { color: var(--accent); }
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 12px 16px;
