@@ -4,6 +4,10 @@ A small web shop built with the [`vicander`](https://github.com/blackuprise/vica
 and Phoenix LiveView. Customers log in, browse and search products, fill a basket and place orders.
 Admins add products, restock them and read a report (orders today, pending baskets, revenue, stock).
 
+It is also **used by AI clients** through an MCP server (Claude Code, Claude Desktop, any MCP
+client), locally over stdio or remotely over HTTP, where the shop is its own OAuth 2.1
+authorization server or trusts an external one. See [MCP](#mcp-the-shop-for-an-ai-client).
+
 ## Run it
 
 Postgres is needed on `localhost:5432` (user and password `postgres`; `docker compose up -d --wait`
@@ -30,6 +34,7 @@ Seeded logins (development only): `admin@shop.test` / `admin-password` and
 | `/basket`, `/orders` | users | review the basket and place an order; past orders |
 | `/admin/products` | admins | add products, restock |
 | `/admin/report` | admins | orders and revenue today and for 7 days, pending baskets, low stock (refreshes every 5s) |
+| `/oauth/authorize` | users | the consent page an AI app sends you to: what it asks for, Allow or Deny ([below](#over-http-with-oauth)) |
 
 ## MCP: the shop for an AI client
 
@@ -45,6 +50,8 @@ user, with the rules of the web interface**:
 | `view_basket`, `orders_of_customer` | a customer, for their own id; an admin, for anyone's |
 | `shop_report`, `pending_baskets` | admins only, with their own id as `admin_id` |
 | `restock_product` | admins only, with their own id as `admin_id`, a `product_id` and a `quantity` |
+
+### Over stdio, as one user
 
 ```bash
 SHOP_MCP_PASSWORD=customer-password mix shop.mcp --email customer@shop.test   # stdin/stdout
@@ -63,14 +70,16 @@ call, through the application's `Authenticate` query. The password is an environ
 never an argument, so it is not in the process list. Only the user's id is kept: every call asks
 the application for the user again, so a changed role or a deleted account takes effect at once,
 as on the web. A refused call says why (`Admins only.`), and `tools/list` shows every tool to
-everyone. Passwords, registration and login are not offered at all.
+everyone. Passwords, registration and login are not offered as tools.
 
 `mix shop.mcp` starts the application without the web server, so it runs next to a shop that is
 already up on port 4000. The outbox poller and the read-model handlers run, so the reports stay
 up to date; next to a running shop the two pollers share the outbox (events are claimed with a
-lease, so each is delivered once). The code is `interface/mcp.ex` (what is offered), `interface/mcp/policy.ex` (who may
-call what) and `interface/mcp/me.ex`; like the web interface it calls the application's commands
-and queries only.
+lease, so each is delivered once).
+
+The code is `interface/mcp.ex` (what is offered), `interface/mcp/policy.ex` (who may call what),
+`interface/mcp/auth.ex` (a bearer token to a user, over HTTP) and `interface/mcp/me.ex`. Like the
+web interface it calls the application's commands and queries only.
 
 ### Over HTTP, with OAuth
 
@@ -91,6 +100,21 @@ claude mcp add --transport http shop http://localhost:4000/mcp
 4. The code goes back to the app, with `state` and `iss`. It trades it, with its PKCE verifier,
    at `POST /oauth/token` for a 15 minute access token (a signed JWT) and a refresh token.
 5. Every `/mcp` call carries `Authorization: Bearer <token>`.
+
+The routes. Apart from the user's part (`/oauth/authorize`), none uses the cookie session: callers
+send tokens, not cookies.
+
+| route | |
+|---|---|
+| `POST /mcp` | the MCP endpoint (`DDD.MCP.HTTP`): one JSON-RPC message per request, a bearer token on each |
+| `GET /.well-known/oauth-protected-resource/mcp` | which authorization server to log in at (always served) |
+| `GET /.well-known/oauth-authorization-server` | that server's endpoints and what it supports |
+| `GET /oauth/jwks` | the public keys that verify its access tokens |
+| `POST /oauth/register` | an app registers itself |
+| `GET`, `POST /oauth/authorize` | the user's part: log in, consent page, Allow or Deny (the browser session and CSRF apply here) |
+| `POST /oauth/token` | a code or a refresh token for tokens |
+
+The last five answer `404` when an external server does the authorizing.
 
 What a token allows is its **scopes narrowed by the account's role**, and the role is always read
 from the database, never from the token:
@@ -175,7 +199,8 @@ interface/mcp*   the MCP server, over stdio and HTTP, and who may call what: cal
   reality by a few seconds. Product counts are read directly.
 * **Authorization** is in the application layer (`Authorize.admin/1`): admin commands and queries
   take the acting admin's id and check the role, so hiding a button is never the only protection.
-  Registration passes name, email and password only, so a form cannot choose a role.
+  Registration passes name, email and password only, so a form cannot choose a role. An AI client
+  goes through the same rules, with the scopes of its token narrowing them (see MCP above).
 * **Passwords** are checked by the `Password` value object (8+ characters) and stored as PBKDF2
   hashes. Login answers the same for an unknown email and a wrong password.
 * **No asset build.** The Phoenix and LiveView JS is served from `deps/`, and the CSS is one file
@@ -189,4 +214,11 @@ interface/mcp*   the MCP server, over stdio and HTTP, and who may call what: cal
   production at `info` or above. `SQL=1` logs SQL with its parameters, the password hash among
   them: only for throwaway data.
 * The session cookie holds only the user id; every page load asks the application for the user.
+* **Run it somewhere other than `http://localhost:4000`? Set `SHOP_BASE_URL`.** An access token
+  names the issuer and the audience (`<base>/mcp`), and the shop checks both against that
+  address, never against the request. With the wrong one every token is refused.
+* The key that signs access tokens is made on first start in development (`priv/dev_jwt_key.pem`,
+  git-ignored). Deleting it makes a new one, and the access tokens already issued stop working (the
+  apps refresh and carry on); in production it is `SHOP_JWT_PRIVATE_KEY` and the app does not
+  start without it.
 * Money is whole cents. A basket line keeps the name and price from when it was added.
