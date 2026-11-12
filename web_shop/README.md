@@ -7,8 +7,8 @@ Admins add products, restock them and read a report (orders today, pending baske
 ## Run it
 
 Postgres is needed on `localhost:5432` (user and password `postgres`; `docker compose up -d --wait`
-starts one). Like `todo_app`, it uses the [vicander](https://hex.pm/packages/vicander) Hex package,
-version 0.3.0 (`{:vicander, "~> 0.3"}` in `mix.exs`).
+starts one). It uses the [vicander](https://hex.pm/packages/vicander) Hex package, version 0.4.0
+(`{:vicander, "~> 0.4"}` in `mix.exs`), whose `DDD.MCP.HTTP` serves the MCP endpoint (below).
 
 ```bash
 mix deps.get
