@@ -19,6 +19,19 @@ defmodule WebShop.Interface.Web.Auth do
 
   def current_user(_session), do: nil
 
+  @doc """
+  Where to go after logging in, if it is somewhere the login may send you back to: only an
+  authorization request of this shop (`/oauth/authorize?...`), which is how an app that sent you
+  to log in gets you back to the consent page. Anything else is nil, so `return_to` can never be
+  turned into a redirect to another site.
+  """
+  @spec safe_return_to(term()) :: String.t() | nil
+  def safe_return_to("/oauth/authorize?" <> _ = path) do
+    if String.match?(path, ~r/[\\\x00-\x1f\x7f]/), do: nil, else: path
+  end
+
+  def safe_return_to(_other), do: nil
+
   # Each hook also records the live session its pages belong to (`:live_session`, see the
   # router), because the header must know it: a live `navigate` works inside one session only,
   # and a link to a page of another one has to be a plain `href` (a fresh page load).

@@ -4,3 +4,6 @@
 .claude/
 AGENTS.md
 LEAN-CTX.md
+
+# Local MCP client config (holds the dev admin password)
+.mcp.json

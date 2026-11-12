@@ -12,7 +12,7 @@ defmodule WebShop.Application.Queries.User.Authenticate do
     description "Check a login: returns the user (without the password hash) or invalid_credentials"
 
     field :email, :string, required: true, description: "The login email"
-    field :password, :string, required: true, description: "The password"
+    field :password, :string, required: true, sensitive: true, description: "The password"
   end
 
   @impl DDD.Query

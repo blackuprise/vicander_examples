@@ -25,7 +25,7 @@ defmodule WebShop.MixProject do
 
   defp deps do
     [
-      {:vicander, "~> 0.3"},
+      {:vicander, "~> 0.4"},
       {:ecto_sql, "~> 3.14"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix, "~> 1.8"},
@@ -35,6 +35,10 @@ defmodule WebShop.MixProject do
       {:bandit, "~> 1.5"},
       {:jason, "~> 1.4"},
       {:pbkdf2_elixir, "~> 2.2"},
+      # Signs and verifies the OAuth access tokens (JWTs) the MCP endpoint accepts.
+      {:jose, "~> 1.11"},
+      # Fetches an external authorization server's metadata and signing keys.
+      {:req, "~> 0.5"},
       {:boundary, "~> 0.10", runtime: false}
     ]
   end

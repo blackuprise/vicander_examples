@@ -1,0 +1,98 @@
+{
+  "columns": [
+    {
+      "name": "id",
+      "primary_key": true,
+      "type": ":binary_id"
+    },
+    {
+      "name": "client_id",
+      "null": false,
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "user_id",
+      "null": false,
+      "primary_key": false,
+      "type": ":binary_id"
+    },
+    {
+      "name": "scopes",
+      "null": false,
+      "primary_key": false,
+      "type": "{:array, :string}"
+    },
+    {
+      "name": "redirect_uri",
+      "null": false,
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "code_challenge",
+      "null": false,
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "code_hash",
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "code_expires_at",
+      "primary_key": false,
+      "type": ":utc_datetime"
+    },
+    {
+      "name": "code_used_at",
+      "primary_key": false,
+      "type": ":utc_datetime"
+    },
+    {
+      "name": "refresh_hash",
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "previous_refresh_hash",
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "refresh_expires_at",
+      "primary_key": false,
+      "type": ":utc_datetime"
+    },
+    {
+      "name": "last_used_at",
+      "primary_key": false,
+      "type": ":utc_datetime"
+    },
+    {
+      "name": "revoked_at",
+      "primary_key": false,
+      "type": ":utc_datetime"
+    },
+    {
+      "name": "created_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "updated_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "version",
+      "primary_key": false,
+      "type": ":integer"
+    }
+  ],
+  "identity": [
+    "id"
+  ],
+  "table": "oauth_grants"
+}

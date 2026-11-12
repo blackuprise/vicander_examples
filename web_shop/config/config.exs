@@ -10,14 +10,28 @@ config :web_shop, :repositories,
   user: WebShop.Infrastructure.User.Repository,
   product: WebShop.Infrastructure.Product.Repository,
   basket: WebShop.Infrastructure.Basket.Repository,
-  order: WebShop.Infrastructure.Order.Repository
+  order: WebShop.Infrastructure.Order.Repository,
+  oauth_client: WebShop.Infrastructure.OAuth.Client.Repository,
+  oauth_grant: WebShop.Infrastructure.OAuth.Grant.Repository
+
+# The OAuth server the MCP endpoint trusts. By default the shop is its own authorization server
+# (`mode: :builtin`); `runtime.exs` switches to an external one (`SHOP_OAUTH_ISSUER`). The signer
+# and the verifier are the adapters of the domain's token ports.
+config :web_shop, :oauth,
+  mode: :builtin,
+  signer: WebShop.Infrastructure.OAuth.JoseSigner,
+  verifier: WebShop.Infrastructure.OAuth.BuiltinVerifier,
+  # Apps registered by hand (no dynamic registration needed): `client_id`, `name`, `redirect_uris`.
+  clients: []
 
 # Where each aggregate is stored, for `loads:` on a command field.
 config :vicander, :repositories, [
   {WebShop.Domain.User, WebShop.Domain.User.Repository},
   {WebShop.Domain.Product, WebShop.Domain.Product.Repository},
   {WebShop.Domain.Basket, WebShop.Domain.Basket.Repository},
-  {WebShop.Domain.Order, WebShop.Domain.Order.Repository}
+  {WebShop.Domain.Order, WebShop.Domain.Order.Repository},
+  {WebShop.Domain.OAuth.Client, WebShop.Domain.OAuth.Client.Repository},
+  {WebShop.Domain.OAuth.Grant, WebShop.Domain.OAuth.Grant.Repository}
 ]
 
 config :vicander, :health,
@@ -34,5 +48,10 @@ config :web_shop, WebShop.Interface.Web.Endpoint,
   live_view: [signing_salt: "web-shop-lv-salt"]
 
 config :phoenix, :json_library, Jason
+
+# Phoenix logs the parameters of every request at debug level and hides, by default, only a key
+# called "password". A key is hidden when it contains one of these words, which covers the OAuth
+# endpoints' secrets: the authorization `code`, the PKCE `code_verifier`, a `refresh_token`.
+config :phoenix, :filter_parameters, ["password", "token", "code", "secret"]
 
 import_config "#{config_env()}.exs"

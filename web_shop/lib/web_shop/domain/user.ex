@@ -7,6 +7,9 @@ defmodule WebShop.Domain.User do
   """
   use DDD.Aggregate
 
+  # The hash stays out of inspect/1, so it stays out of debug logs, crash reports and the console.
+  @derive {Inspect, except: [:password_hash]}
+
   aggregate do
     description "A shop user: a customer who buys, or an admin who manages the catalog"
 

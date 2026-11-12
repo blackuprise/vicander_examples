@@ -5,10 +5,15 @@ defmodule WebShop.Infrastructure do
     deps: [WebShop.Domain],
     exports: [
       Repo,
-      LogRedactor,
       User.Repository,
       Product.Repository,
       Basket.Repository,
-      Order.Repository
+      Order.Repository,
+      OAuth.Client.Repository,
+      OAuth.Grant.Repository,
+      OAuth.JoseSigner,
+      OAuth.BuiltinVerifier,
+      OAuth.ExternalVerifier,
+      OAuth.Keys
     ]
 end
