@@ -49,4 +49,9 @@ config :web_shop, WebShop.Interface.Web.Endpoint,
 
 config :phoenix, :json_library, Jason
 
+# Phoenix logs the parameters of every request at debug level and hides, by default, only a key
+# called "password". A key is hidden when it contains one of these words, which covers the OAuth
+# endpoints' secrets: the authorization `code`, the PKCE `code_verifier`, a `refresh_token`.
+config :phoenix, :filter_parameters, ["password", "token", "code", "secret"]
+
 import_config "#{config_env()}.exs"

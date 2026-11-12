@@ -409,6 +409,62 @@ defmodule WebShop.OAuthHTTPTest do
     end
   end
 
+  describe "the logs" do
+    import ExUnit.CaptureLog
+
+    test "never hold a code, a verifier or a refresh token, even at debug level", %{conn: conn} do
+      user = register!()
+      {:ok, client} = RegisterClient.call(%{name: "Claude", redirect_uris: [@redirect]})
+
+      {:ok, %{code: code}} =
+        AuthorizeClient.call(%{
+          user_id: user.id,
+          client_id: client.id,
+          redirect_uri: @redirect,
+          scope: "shop:read",
+          code_challenge: challenge(),
+          code_challenge_method: "S256"
+        })
+
+      log =
+        capture_log([level: :debug], fn ->
+          tokens =
+            conn
+            |> token_request(%{
+              "grant_type" => "authorization_code",
+              "code" => code,
+              "code_verifier" => @verifier,
+              "client_id" => client.id,
+              "redirect_uri" => @redirect
+            })
+            |> json_response(200)
+
+          build_conn()
+          |> token_request(%{
+            "grant_type" => "refresh_token",
+            "refresh_token" => tokens["refresh_token"],
+            "client_id" => client.id
+          })
+          |> json_response(200)
+
+          send(self(), {:refresh_token, tokens["refresh_token"]})
+        end)
+
+      assert_received {:refresh_token, refresh_token}
+
+      # The request was logged (so the test would notice a log that stayed silent)...
+      assert log =~ "OAuthController.token/2"
+      assert log =~ client.id
+
+      # ...but none of its secrets are in it.
+      for secret <- [code, @verifier, refresh_token] do
+        refute log =~ secret
+      end
+
+      assert log =~ "[FILTERED]"
+    end
+  end
+
   describe "the token endpoint" do
     test "never lets an answer be kept", %{conn: conn} do
       conn = token_request(conn, %{"grant_type" => "authorization_code"})

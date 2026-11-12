@@ -210,7 +210,11 @@ interface/mcp*   the MCP server, over stdio and HTTP, and who may call what: cal
 
 * The framework logs every command and query, with its parameters, at debug level. The password
   fields are `sensitive: true`, so they are left out of those lines (nothing filters the text
-  afterwards); the other parameters, such as the email, are logged. Dev logs at `info`; keep
+  afterwards); the other parameters, such as the email, are logged. Phoenix's own request log
+  hides any parameter whose name contains `password`, `token`, `code` or `secret`
+  (`config :phoenix, :filter_parameters`), which covers the OAuth endpoints' authorization code,
+  PKCE verifier and refresh token; its default is `password` alone, which would have logged them
+  at debug level. Dev logs at `info`; keep
   production at `info` or above. `SQL=1` logs SQL with its parameters, the password hash among
   them: only for throwaway data.
 * The session cookie holds only the user id; every page load asks the application for the user.
