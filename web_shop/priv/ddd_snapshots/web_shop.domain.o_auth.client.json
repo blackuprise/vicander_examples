@@ -1,0 +1,40 @@
+{
+  "columns": [
+    {
+      "name": "id",
+      "primary_key": true,
+      "type": ":binary_id"
+    },
+    {
+      "name": "name",
+      "null": false,
+      "primary_key": false,
+      "type": ":string"
+    },
+    {
+      "name": "redirect_uris",
+      "null": false,
+      "primary_key": false,
+      "type": "{:array, :string}"
+    },
+    {
+      "name": "created_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "updated_at",
+      "primary_key": false,
+      "type": ":utc_datetime_usec"
+    },
+    {
+      "name": "version",
+      "primary_key": false,
+      "type": ":integer"
+    }
+  ],
+  "identity": [
+    "id"
+  ],
+  "table": "oauth_clients"
+}

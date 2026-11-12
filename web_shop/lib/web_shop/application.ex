@@ -20,6 +20,17 @@ defmodule WebShop.Application do
       Queries.Basket.PendingBaskets,
       Queries.Order.OrdersOfCustomer,
       Queries.Report.ShopReport,
+      Commands.OAuth.RegisterClient,
+      Commands.OAuth.AuthorizeClient,
+      Commands.OAuth.ExchangeCode,
+      Commands.OAuth.RefreshGrant,
+      Queries.OAuth.GetClient,
+      Queries.OAuth.AuthenticateToken,
+      Queries.OAuth.ResourceMetadata,
+      Queries.OAuth.ServerMetadata,
+      Queries.OAuth.Jwks,
+      OAuth.Endpoints,
+      OAuth.Access,
       Projections.Order.DailySales,
       Projections.Basket.BasketOverview
     ]

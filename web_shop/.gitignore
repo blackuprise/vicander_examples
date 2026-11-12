@@ -4,6 +4,8 @@
 /doc/
 /.fetch
 erl_crash.dump
+# The development signing key for OAuth tokens (made on first start).
+/priv/dev_jwt_key.pem
 *.ez
 *.beam
 /tmp/

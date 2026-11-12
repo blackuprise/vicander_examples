@@ -4,10 +4,14 @@ defmodule WebShop.Interface.Web.LoginLive do
 
   alias WebShop.Application.Queries.User.Authenticate
 
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     {:ok,
      socket
-     |> assign(page_title: "Log in", trigger_action: false)
+     |> assign(
+       page_title: "Log in",
+       trigger_action: false,
+       return_to: WebShop.Interface.Web.Auth.safe_return_to(params["return_to"])
+     )
      |> assign(form: to_form(%{"email" => "", "password" => ""}, as: :user))}
   end
 
@@ -16,6 +20,7 @@ defmodule WebShop.Interface.Web.LoginLive do
     <section class="card narrow">
       <h1>Log in</h1>
       <.form for={@form} id="login-form" action="/session" phx-submit="login" phx-trigger-action={@trigger_action}>
+        <input :if={@return_to} type="hidden" name="return_to" value={@return_to} />
         <label>Email <input type="email" name={@form[:email].name} value={@form[:email].value} required autofocus /></label>
         <label>Password <input type="password" name={@form[:password].name} required /></label>
         <button type="submit">Log in</button>

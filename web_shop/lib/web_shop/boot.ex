@@ -39,7 +39,7 @@ defmodule WebShop.Boot do
     if Application.get_env(:web_shop, :start_outbox_poller, true), do: [], else: false
   end
 
-  # `mix shop.mcp` runs the application without the web server (and without the poller).
+  # `mix shop.mcp` runs the application without the web server.
   defp web do
     if Application.get_env(:web_shop, :start_web, true), do: [Endpoint], else: []
   end

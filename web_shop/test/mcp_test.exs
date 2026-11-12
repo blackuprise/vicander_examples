@@ -127,29 +127,6 @@ defmodule WebShop.MCPTest do
     end
   end
 
-  describe "without the outbox poller" do
-    # `mix shop.mcp` turns the poller off (see Mix.Tasks.Shop.Mcp.prepare/1) because restocking
-    # emits no events. If restocking ever emits one, nobody would deliver it from this process:
-    # this test fails then, and the task has to keep the poller running.
-    test "restocking writes nothing to the outbox" do
-      admin = admin!()
-      product = product!(admin, %{stock: 3})
-      before_count = Repo.aggregate(DDD.Outbox.Event, :count)
-
-      Policy.sign_in(admin.email, @password)
-
-      assert data(
-               call("restock_product", %{
-                 "admin_id" => admin.id,
-                 "product_id" => product.id,
-                 "quantity" => 5
-               })
-             )
-
-      assert Repo.aggregate(DDD.Outbox.Event, :count) == before_count
-    end
-  end
-
   describe "as a customer" do
     setup do
       shop = shop!()
@@ -273,17 +250,17 @@ defmodule WebShop.MCPTest do
   end
 
   describe "mix shop.mcp" do
-    test "starts the application without the web server and the poller, and takes --email" do
-      on_exit(fn ->
-        for key <- ~w(start_web start_outbox_poller subscribe_handlers)a,
-            do: Application.delete_env(:web_shop, key)
-      end)
+    test "starts the application without the web server only, and takes --email" do
+      on_exit(fn -> Application.delete_env(:web_shop, :start_web) end)
+      before = Application.get_all_env(:web_shop)
 
       assert :ok = Mix.Tasks.Shop.Mcp.prepare(email: "ann@example.com")
 
       assert Application.get_env(:web_shop, :start_web) == false
-      assert Application.get_env(:web_shop, :start_outbox_poller) == false
-      assert Application.get_env(:web_shop, :subscribe_handlers) == false
+      # The poller and the handlers keep running, so the reports are up to date.
+      for key <- ~w(start_outbox_poller subscribe_handlers)a,
+          do: assert(Application.get_env(:web_shop, key) == before[key])
+
       assert Application.get_env(:web_shop, :mcp_email) == "ann@example.com"
     end
 

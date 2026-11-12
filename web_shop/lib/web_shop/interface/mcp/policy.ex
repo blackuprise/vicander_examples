@@ -14,12 +14,49 @@ defmodule WebShop.Interface.MCP.Policy do
   """
   alias WebShop.Application.Queries.User.{Authenticate, GetUser}
 
-  @key {__MODULE__, :user_id}
+  alias WebShop.Application.OAuth.Access
 
-  @doc "The `authorize:` function of `WebShop.Interface.MCP`: `:ok`, or `{:error, reason}`."
-  def authorize(tool, arguments) do
-    with {:ok, user} <- current_user(), do: check(tool, user, arguments)
+  @key {__MODULE__, :user_id}
+  @context_key {__MODULE__, :context}
+
+  # The tools that change something. Everything else only reads.
+  @write_tools ~w(restock_product)
+
+  @doc """
+  The `authorize:` function of `WebShop.Interface.MCP`: `:ok`, or `{:error, reason}`.
+
+  Over HTTP the `context` is what the transport learned from the access token (`:user_id`,
+  `:role`, `:scopes`), read from the account a moment ago; over stdio it is empty and the user is
+  the one the server was started as. The context is also kept for the tool that runs next in
+  this process, which is how `me` knows who is asking (a tool is not handed the context).
+  """
+  def authorize(tool, arguments, context) do
+    Process.put(@context_key, context)
+
+    case context do
+      %{user_id: id, role: role} -> check(tool, %{id: id, role: role}, arguments)
+      _ -> authorize(tool, arguments)
+    end
   end
+
+  @doc "Authorize a call made by the user a stdio server was started as."
+  def authorize(tool, arguments) do
+    with {:ok, user} <- stdio_user(), do: check(tool, user, arguments)
+  end
+
+  @doc """
+  The scope a request needs, for `DDD.MCP.HTTP`'s `authorize_request:`: `:ok`, or
+  `{:error, {:insufficient_scope, scope}}`, which becomes a `403` telling the client to ask the
+  user for more. Reading needs `shop:read`, and the tools that change something `shop:write`.
+  Only a call of a tool needs a scope; the protocol messages around it do not.
+  """
+  def required_scope(%{"method" => "tools/call", "params" => %{"name" => name}}, %{scopes: scopes})
+      when is_binary(name) do
+    needed = Access.required_scope(if name in @write_tools, do: :write, else: :read)
+    if needed in scopes, do: :ok, else: {:error, {:insufficient_scope, needed}}
+  end
+
+  def required_scope(_message, _context), do: :ok
 
   # Everyone signed in.
   defp check("me", _user, _arguments), do: :ok
@@ -46,6 +83,13 @@ defmodule WebShop.Interface.MCP.Policy do
 
   @doc "The signed-in user (a map with `:id`, `:name`, `:email`, `:role`), or `{:error, reason}`."
   def current_user do
+    case Process.get(@context_key) do
+      %{user_id: id} -> fetch(id)
+      _ -> stdio_user()
+    end
+  end
+
+  defp stdio_user do
     with {:ok, id} <- session_id(), do: fetch(id)
   end
 

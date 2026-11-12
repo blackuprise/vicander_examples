@@ -14,7 +14,15 @@ defmodule WebShop.Interface.MCP do
   report and the pending baskets, and restocks products. `tools/list` shows all the tools
   whoever you are; a call the user may not make is refused with the reason.
 
-  Like the web interface this calls only the application's queries, never a repository.
+  It is served in two ways. Over stdio (`mix shop.mcp`) it is one process for one user, who signs
+  in with an email and a password from the environment. Over HTTP (`POST /mcp`, see the router)
+  it serves many users at once, each by an OAuth access token: the shop's own authorization
+  server issues them, or an external one does (`WebShop.Interface.Web.OAuthController`,
+  `WebShop.Interface.MCP.Auth`). The same policy decides in both; over HTTP it also gets what the
+  token allows (its scopes) and the account's role as the application just read it.
+
+  Like the web interface this calls only the application's commands and queries, never a
+  repository.
   """
   use DDD.MCP.Server,
     name: "web-shop",
@@ -35,5 +43,5 @@ defmodule WebShop.Interface.MCP do
       WebShop.Application.Queries.Report.ShopReport,
       WebShop.Application.Queries.Basket.PendingBaskets
     ],
-    authorize: &WebShop.Interface.MCP.Policy.authorize/2
+    authorize: &WebShop.Interface.MCP.Policy.authorize/3
 end

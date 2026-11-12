@@ -10,9 +10,10 @@ defmodule Mix.Tasks.Shop.Mcp do
   `SHOP_MCP_PASSWORD`, so it does not show in the process list; stdin is the protocol, so there
   is no prompt. `--read-only` refuses the command tools (restocking), whoever the user is.
 
-  This is `mix vic.mcp WebShop.Interface.MCP` without the web server and the outbox poller:
-  the process only answers questions and restocks (which emits no events), and the web server
-  of a running shop already owns the port.
+  This is `mix vic.mcp WebShop.Interface.MCP` without the web server, whose port a running
+  shop already owns. The outbox poller and the read-model handlers do run, so the reports stay
+  up to date; next to a running shop the two pollers share the outbox (events are claimed with
+  a lease, so each is delivered once).
   """
   use Boundary, classify_to: WebShop
   use Mix.Task
@@ -34,8 +35,6 @@ defmodule Mix.Tasks.Shop.Mcp do
   # What `run/1` sets before the application starts (see `WebShop.Boot`).
   def prepare(opts) do
     Application.put_env(:web_shop, :start_web, false)
-    Application.put_env(:web_shop, :start_outbox_poller, false)
-    Application.put_env(:web_shop, :subscribe_handlers, false)
 
     if email = opts[:email], do: Application.put_env(:web_shop, :mcp_email, email)
     :ok
